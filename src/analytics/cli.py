@@ -10,6 +10,7 @@ from analytics.db import Database
 from analytics.sources import get_source
 from analytics.statistics import analyze_model_usage, analyze_temporal_patterns
 from analytics.output import OutputFormatter
+from analytics.utils import generate_timestamped_filename, parse_date
 
 
 # Load environment variables
@@ -52,8 +53,8 @@ def main(source, days, start_date, end_date, model, output_format, output_path,
         return
 
     # Determine date range
-    end_dt = datetime.now() if not end_date else datetime.strptime(end_date, '%Y-%m-%d')
-    start_dt = end_dt - timedelta(days=days) if not start_date else datetime.strptime(start_date, '%Y-%m-%d')
+    end_dt = parse_date(end_date) or datetime.now()
+    start_dt = parse_date(start_date) or (end_dt - timedelta(days=days))
 
     # Initialize output formatter
     formatter = OutputFormatter()
@@ -64,7 +65,6 @@ def main(source, days, start_date, end_date, model, output_format, output_path,
 
         click.echo(f"Fetching data from {source} for {days} days...")
 
-        # Fetch requests
         filters = {}
         if model:
             filters['model'] = model
@@ -76,34 +76,31 @@ def main(source, days, start_date, end_date, model, output_format, output_path,
             raise SystemExit(0)
 
         click.echo(f"Found {len(requests)} requests")
-
-        # Run analyses
         click.echo("Analyzing data...")
+
+        total_requests = len(requests)
 
         results = {
             'source': source,
             'start_date': start_dt.isoformat(),
             'end_date': end_dt.isoformat(),
             'days': days,
-            'total_requests': len(requests),
+            'total_requests': total_requests,
         }
 
         # Summary stats
         results['summary'] = {
-            'total_requests': len(requests),
-            'success_rate': sum(1 for r in requests if r.get('status') == 'success') / len(requests),
+            'total_requests': total_requests,
+            'success_rate': sum(1 for r in requests if r.get('status') == 'success') / total_requests,
             'unique_models': len(set(r.get('model') for r in requests if r.get('model'))),
             'total_tokens': sum(r.get('total_tokens', 0) for r in requests),
             'days': days,
         }
 
-        # Model usage analysis
         results['model_usage'] = analyze_model_usage(requests)
 
-        # Temporal patterns
         results['temporal'] = analyze_temporal_patterns(requests)
 
-        # Sessions
         click.echo("Fetching session data...")
         sessions = get_sessions(db, start_dt, end_dt)
         results['sessions'] = sessions[:top_n]
@@ -114,7 +111,7 @@ def main(source, days, start_date, end_date, model, output_format, output_path,
             click.echo("Analyzing API key usage...")
             api_keys = get_api_key_usage(db, start_dt, end_dt)
             results['api_keys'] = api_keys[:top_n]
-        except:
+        except ImportError:
             pass
 
         # Errors (if any)
@@ -122,7 +119,7 @@ def main(source, days, start_date, end_date, model, output_format, output_path,
             from analytics.sources.litellm import get_error_summary
             errors = get_error_summary(db, start_dt, end_dt)
             results['errors'] = errors
-        except:
+        except ImportError:
             pass
 
         # Public model names (what clients call LiteLLM with)
@@ -131,7 +128,7 @@ def main(source, days, start_date, end_date, model, output_format, output_path,
             click.echo("Analyzing public model names...")
             public_models = get_public_model_names(db, start_dt, end_dt)
             results['public_models'] = public_models
-        except:
+        except ImportError:
             pass
 
         # Output results
@@ -140,9 +137,9 @@ def main(source, days, start_date, end_date, model, output_format, output_path,
 
         if output_format in ['json', 'all']:
             if output_path:
-                output_file = Path(output_path) / f"analytics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                output_file = Path(output_path) / generate_timestamped_filename()
             else:
-                output_file = f"analytics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                output_file = generate_timestamped_filename()
 
             formatter.export_json(results, str(output_file))
 

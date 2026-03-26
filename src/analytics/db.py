@@ -1,10 +1,13 @@
 """Database connection management for PostgreSQL"""
 
 import os
+import logging
 import psycopg2
 from psycopg2.pool import SimpleConnectionPool
 from contextlib import contextmanager
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -101,5 +104,5 @@ class Database:
                     cur.execute("SELECT 1")
                     return True
         except Exception as e:
-            print(f"Connection test failed: {e}")
+            logger.error(f"Connection test failed: {e}")
             return False

@@ -57,7 +57,6 @@ def analyze_model_usage(requests: List[Dict]) -> Dict[str, Any]:
                 'total_tokens': [],
                 'durations': [],
                 'success_count': 0,
-                'failure_count': 0,
             }
 
         by_model[model]['requests'].append(req)
@@ -82,13 +81,13 @@ def analyze_model_usage(requests: List[Dict]) -> Dict[str, Any]:
         status = req.get('status', 'success')
         if status == 'success':
             by_model[model]['success_count'] += 1
-        else:
-            by_model[model]['failure_count'] += 1
 
     # Calculate statistics for each model
     results = {}
     for model, data in by_model.items():
         total_requests = len(data['requests'])
+        success_count = data['success_count']
+        failure_count = total_requests - success_count
 
         # Calculate throughput (tokens/second) for successful requests
         throughput = []
@@ -100,9 +99,9 @@ def analyze_model_usage(requests: List[Dict]) -> Dict[str, Any]:
 
         results[model] = {
             'total_requests': total_requests,
-            'success_count': data['success_count'],
-            'failure_count': data['failure_count'],
-            'success_rate': data['success_count'] / total_requests if total_requests > 0 else 0,
+            'success_count': success_count,
+            'failure_count': failure_count,
+            'success_rate': success_count / total_requests if total_requests > 0 else 0,
             'prompt_tokens': calculate_distribution(data['prompt_tokens']) if data['prompt_tokens'] else {},
             'completion_tokens': calculate_distribution(data['completion_tokens']) if data['completion_tokens'] else {},
             'total_tokens': calculate_distribution(data['total_tokens']) if data['total_tokens'] else {},

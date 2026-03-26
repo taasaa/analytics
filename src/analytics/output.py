@@ -10,6 +10,8 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.layout import Layout
 
+from analytics.utils import format_duration, generate_timestamped_filename
+
 
 class OutputFormatter:
     """Format and display analytics results"""
@@ -51,24 +53,11 @@ class OutputFormatter:
             tokens = stats.get('total_tokens', {})
             latency = stats.get('latency', {})
 
-            # Format latency
             avg_latency = latency.get('mean', 0)
             p95_latency = latency.get('p95', 0)
 
-            # Convert to appropriate unit
-            if avg_latency >= 60:
-                avg_str = f"{avg_latency/60:.1f}m"
-            elif avg_latency >= 1:
-                avg_str = f"{avg_latency:.1f}s"
-            else:
-                avg_str = f"{avg_latency*1000:.0f}ms"
-
-            if p95_latency >= 60:
-                p95_str = f"{p95_latency/60:.1f}m"
-            elif p95_latency >= 1:
-                p95_str = f"{p95_latency:.1f}s"
-            else:
-                p95_str = f"{p95_latency*1000:.0f}ms"
+            avg_str = format_duration(avg_latency)
+            p95_str = format_duration(p95_latency)
 
             table.add_row(
                 model,
@@ -336,8 +325,7 @@ class OutputFormatter:
             output_path: Output file path (optional, auto-generated if not provided)
         """
         if not output_path:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            output_path = f"analytics_{timestamp}.json"
+            output_path = generate_timestamped_filename()
 
         # Ensure output directory exists
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)

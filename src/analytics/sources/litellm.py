@@ -52,7 +52,8 @@ def get_requests(db: Database, start: datetime, end: datetime, **filters) -> Lis
     query += ' ORDER BY "startTime" DESC'
 
     if 'limit' in filters:
-        query += f" LIMIT {filters['limit']}"
+        query += ' LIMIT %s'
+        params.append(filters['limit'])
 
     return db.execute(query, tuple(params))
 
