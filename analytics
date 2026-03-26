@@ -1,0 +1,22 @@
+#!/bin/bash
+# Analytics - Home Infrastructure Observability Tool
+# Usage: ./analytics [options]
+#   ./analytics                    # Last 14 days
+#   ./analytics --days 7           # Last 7 days
+#   ./analytics --help             # Show all options
+
+set -e
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Activate virtual environment and set PYTHONPATH
+cd "$SCRIPT_DIR"
+source venv/bin/activate
+export PYTHONPATH="$SCRIPT_DIR/src"
+
+# Run the analytics CLI with all arguments passed through
+python -m analytics.cli "$@"
+
+# Deactivate when done
+deactivate

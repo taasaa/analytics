@@ -1,0 +1,16 @@
+# Analytics Configuration
+
+database:
+  host: localhost
+  port: 5432
+  name: litellm
+  user: taasaa
+
+analysis:
+  default_days: 14
+  min_requests: 10
+  top_n: 20
+
+output:
+  default_format: all  # console, json, all
+  export_dir: ./reports/
